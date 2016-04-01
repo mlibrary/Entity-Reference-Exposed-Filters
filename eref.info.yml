@@ -1,5 +1,1 @@
-name: Entity Reference Exposed Filters
-type: module
-description: Entity Reference exposed filters for views
-core: 8.x
-
+name = Entity Reference Exposed Filters
