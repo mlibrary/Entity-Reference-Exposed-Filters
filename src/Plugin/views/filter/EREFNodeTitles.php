@@ -41,11 +41,11 @@ class EREFNodeTitles extends ManyToOne {
     //TODO this seems horrible. How can I get the relationship type from the handler?
     $invalid_relationships = array('cid', 'comment_cid', 'last_comment_uid', 'uid', 'vid', 'nid');
     foreach ($this->get_relationships as $key => $relationship) {
-      $is_node = strpos($relationship['table'], 'ode__');
+      //$is_node = strpos($relationship['table'], 'ode__');
       $is_target = strpos($relationship['id'], 'target_id');
       if ($relationship['plugin_id'] != 'standard' || 
           in_array($key, $invalid_relationships) || 
-          $is_node === false || 
+          //$is_node === false || 
           $is_target !== false) {
         unset($this->get_relationships[$key]);
       }
