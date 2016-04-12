@@ -1,9 +1,9 @@
 <?php
 /**
  * @file
- * Definition of Drupal\eref\Plugin\views\filter\EREFNodeTitles.
+ * Definition of Drupal\entity_reference_exposed_filters\Plugin\views\filter\EREFNodeTitles.
  */
-namespace Drupal\eref\Plugin\views\filter;
+namespace Drupal\entity_reference_exposed_filters\Plugin\views\filter;
 use Drupal\views\Plugin\views\display\DisplayPluginBase;
 use Drupal\views\Plugin\views\filter\ManyToOne;
 use Drupal\views\ViewExecutable;
