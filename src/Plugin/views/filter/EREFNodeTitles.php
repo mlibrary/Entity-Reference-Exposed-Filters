@@ -37,6 +37,9 @@ class EREFNodeTitles extends ManyToOne {
   public function init(ViewExecutable $view, DisplayPluginBase $display, array &$options = NULL) {
     parent::init($view, $display, $options);
     $this->get_relationships = $this->view->getHandlers('relationship');
+    if ($this->get_relationships === NULL) {
+      $this->get_relationship = array();
+    }
     //check for existence of relationship and remove non-standard and non-node relationships
     //TODO this seems horrible. How can I get the relationship type from the handler?
     $invalid_relationships = array('cid', 'comment_cid', 'last_comment_uid', 'uid', 'vid', 'nid');
