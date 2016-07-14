@@ -110,9 +110,12 @@ class EREFNodeTitles extends ManyToOne {
     //always exposed
     $options['exposed'] = array('default' => 1);
 
-    //get the relationships. set the first as the default
-    $relationship_field_names = array_keys($this->get_relationships);
-    $options['relationship'] = array('default' => $relationship_field_names[0], $this->get_relationships);
+    // only set the 'relationship' option if get_relationships returns an array.
+    if (is_array($this->get_relationships)) {
+      //get the relationships. set the first as the default
+      $relationship_field_names = array_keys($this->get_relationships);
+      $options['relationship'] = array('default' => $relationship_field_names[0], $this->get_relationships);
+    }
 
     //set the sort defaults. always numeric. compare with sort options private arrays to get value for sort
     $options['sort_order'] = array('default' => 0);
