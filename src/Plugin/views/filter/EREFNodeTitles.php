@@ -26,6 +26,7 @@ class EREFNodeTitles extends ManyToOne {
 
   private $sort_by_options;
   private $sort_order_options;
+  private $get_unpublished_options;
   private $get_relationships;
 
   public function validate() {
@@ -60,6 +61,7 @@ class EREFNodeTitles extends ManyToOne {
     //set the sort options
     $this->sort_by_options = array('nid','title');
     $this->sort_order_options = array('DESC','ASC');
+    $this->get_unpublished_options = array('Unpublished', 'Published', 'All');
   }
 
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
@@ -89,6 +91,14 @@ class EREFNodeTitles extends ManyToOne {
       '#description' => t('In what order do you want to sort the node titles?'),
       '#required' => TRUE,
     );
+    $form['get_unpublished'] = array(
+      '#type' => 'radios',
+      '#title' => t('Published Status'),
+      '#default_value'=> $this->options['get_unpublished'],
+      '#options' => $this->get_unpublished_options,
+      '#description' => t('Do you want Published, Unpublished or All?'),
+      '#required' => TRUE,
+    );
   }
 
   public function submitExtraOptionsForm($form, FormStateInterface $form_state) {
@@ -111,13 +121,16 @@ class EREFNodeTitles extends ManyToOne {
     $options['exposed'] = array('default' => 1);
 
     //get the relationships. set the first as the default
-    $relationship_field_names = array_keys($this->get_relationships);
-    $options['relationship'] = array('default' => $relationship_field_names[0], $this->get_relationships);
+    $options = array();
+    if (isset($this->get_relationships)){
+      $relationship_field_names = array_keys($this->get_relationships);
+      $options['relationship'] = array('default' => $relationship_field_names[0], $this->get_relationships);
 
-    //set the sort defaults. always numeric. compare with sort options private arrays to get value for sort
-    $options['sort_order'] = array('default' => 0);
-    $options['sort_by'] = array('default' => 1);
-
+      //set the sort defaults. always numeric. compare with sort options private arrays to get value for sort
+      $options['sort_order'] = array('default' => 0);
+      $options['sort_by'] = array('default' => 1);
+      $options['get_unpublished'] = array('default' => 1);
+    }
     return $options;
   }
 
@@ -206,9 +219,11 @@ class EREFNodeTitles extends ManyToOne {
       $get_entity = \Drupal::entityManager()->getStorage($gen_options['target_entity_type_id']);
       $relatedContentQuery = \Drupal::entityQuery($gen_options['target_entity_type_id'])
           ->condition('type', $gen_options['target_bundles'], 'IN')
-          ->condition('status', 1)
           ->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
           //leave this for any debugging ->sort('title', 'ASC');
+      if ($this->options['get_unpublished'] != 2) {
+        $relatedContentQuery->condition('status', $this->get_unpublished_options[$this->options['get_unpublished']]);
+      }
       $relatedContentIds = $relatedContentQuery->execute(); //returns an array of node ID's
       
       //get the titles
