@@ -214,18 +214,16 @@ class EREFNodeTitles extends ManyToOne {
           }
         }
       }
-      
       //run the query
       $get_entity = \Drupal::entityManager()->getStorage($gen_options['target_entity_type_id']);
       $relatedContentQuery = \Drupal::entityQuery($gen_options['target_entity_type_id'])
-          ->condition('type', $gen_options['target_bundles'], 'IN')
-          ->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
-          //leave this for any debugging ->sort('title', 'ASC');
+        ->condition('type', $gen_options['target_bundles'], 'IN');
+      //leave this for any debugging ->sort('title', 'ASC');
       if ($this->options['get_unpublished'] != 2) {
-        $relatedContentQuery->condition('status', $this->get_unpublished_options[$this->options['get_unpublished']]);
+        $relatedContentQuery->condition('status', $this->options['get_unpublished']);
       }
+      $relatedContentQuery->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
       $relatedContentIds = $relatedContentQuery->execute(); //returns an array of node ID's
-      
       //get the titles
       foreach($relatedContentIds as $contentId){
           // building an array with nid as key and title as value
