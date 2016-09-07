@@ -27,6 +27,7 @@ class EREFNodeTitles extends ManyToOne {
   private $sort_by_options;
   private $sort_order_options;
   private $get_unpublished_options;
+  private $get_filter_no_results_options;
   private $get_relationships;
 
   public function validate() {
@@ -62,6 +63,7 @@ class EREFNodeTitles extends ManyToOne {
     $this->sort_by_options = array('nid','title');
     $this->sort_order_options = array('DESC','ASC');
     $this->get_unpublished_options = array('Unpublished', 'Published', 'All');
+    $this->get_filter_no_results_options = array('Yes', "No");
   }
 
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
@@ -99,6 +101,14 @@ class EREFNodeTitles extends ManyToOne {
       '#description' => t('Do you want Published, Unpublished or All?'),
       '#required' => TRUE,
     );
+    $form['get_filter_no_results'] = array(
+      '#type' => 'radios',
+      '#title' => t('Filter Out Options With No Results'),
+      '#default_value'=> $this->options['get_filter_no_results'],
+      '#options' => $this->get_filter_no_results_options,
+      '#description' => t('Do you want to filter out options that will give no results?'),
+      '#required' => TRUE,
+    );
   }
 
   public function submitExtraOptionsForm($form, FormStateInterface $form_state) {
@@ -130,6 +140,7 @@ class EREFNodeTitles extends ManyToOne {
       $options['sort_order'] = array('default' => 0);
       $options['sort_by'] = array('default' => 1);
       $options['get_unpublished'] = array('default' => 1);
+      $options['get_filter_no_results'] = array('default' => 1);
     }
     return $options;
   }
@@ -178,6 +189,7 @@ class EREFNodeTitles extends ManyToOne {
         //we need this as a default
         $relationship_field_name = $relationship_fields[0];
       }
+//dpm($relationship_field_name);
       //run through the bundles. id like to find a way to look up bundles associated with a field. anyone know?
       foreach (array_keys($all_bundles) as $bundle) {
         foreach (\Drupal::entityManager()->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
@@ -187,8 +199,9 @@ class EREFNodeTitles extends ManyToOne {
               continue;
             }
             $field_obj = \Drupal\field\Entity\FieldConfig::loadByName($entity_type_id, $bundle, $field_definition->getName());
+//dpm($field_obj);
             $target_entity_type_id = explode(':',$field_obj->getSetting('handler'));
-
+//dpm($target_entity_type_id);
             if (in_array('views', $target_entity_type_id)) {
               //TODO This wont support views entity references yet
               continue;
@@ -201,7 +214,7 @@ class EREFNodeTitles extends ManyToOne {
             //get all the targets (content types etc) that this might hit
             $target_bundles = array_keys($field_obj->getSetting('handler_settings')['target_bundles']);
             $bundles_needed[] = $bundle;
-            
+//dpm($bundles_needed);
             //get the options together
             $gen_options = array();
             $gen_options = array(
@@ -212,6 +225,7 @@ class EREFNodeTitles extends ManyToOne {
               'target_bundles' => $target_bundles
             );
           }
+//dpm($gen_options);
         }
       }
       //run the query
@@ -224,12 +238,22 @@ class EREFNodeTitles extends ManyToOne {
       }
       $relatedContentQuery->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
       $relatedContentIds = $relatedContentQuery->execute(); //returns an array of node ID's
+//dpm($relatedContentIds);
+      if ($this->options['get_filter_no_results'] == 0) {
+        $db = \Drupal\Core\Database\Database::getConnection();
+        $query = $db->select('node__'.$relationship_field_name, 'x')
+          ->fields('x', array($relationship_field_name.'_target_id'))
+          ->condition('x.'.$relationship_field_name.'_target_id', $relatedContentIds, 'IN');
+        $relatedContentIds = array_unique($query->execute()->fetchAll(\PDO::FETCH_COLUMN));
+      }
+//dpm($relatedContentIds);
       //get the titles
       foreach($relatedContentIds as $contentId){
           // building an array with nid as key and title as value
           $res[$contentId] = $get_entity->load($contentId)->getTitle();
       }
     }
+//dpm($res);
     return $res;
   }
 }
