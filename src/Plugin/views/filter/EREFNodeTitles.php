@@ -10,6 +10,12 @@ use Drupal\views\ViewExecutable;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Component\Plugin\PluginInspectionInterface;
+use Drupal\Core\Database\Connection;
 
 /**
  * Filters by given list of related content title options.
@@ -19,17 +25,54 @@ use Drupal\Core\Ajax\HtmlCommand;
  * @ViewsFilter("eref_node_titles")
  */
 //TODO this doesnt work for tax terms or users. separate filter
-class EREFNodeTitles extends ManyToOne {
+class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, ContainerFactoryPluginInterface {
   /**
    * {@inheritdoc}
    */
-
   private $sort_by_options;
   private $sort_order_options;
   private $get_unpublished_options;
   private $get_filter_no_results_options;
   private $get_relationships;
 
+  /**
+   * @var EntityManagerInterface $entityManager
+   */
+  protected $entityManager;
+
+  /**
+   * @var QueryFactory $entity_query
+   */
+  protected $entityQuery;
+
+  /**
+   * @var Connection $Connection
+   */
+  protected $Connection;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, QueryFactory $entity_query, EntityManagerInterface $entity_manager, Connection $connection) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->entityQuery = $entity_query;
+    $this->entityManager = $entity_manager;
+    $this->Connection = $connection;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity.query'),
+      $container->get('entity.manager'),
+      $container->get('database')
+    );
+  }
   public function validate() {
     if (empty($this->get_relationships)) {
       $this->broken();
@@ -178,8 +221,9 @@ class EREFNodeTitles extends ManyToOne {
           return;
           break;
       }
+
       //get bundles from a field name.
-      $all_bundles = \Drupal::entityManager()->getBundleInfo($entity_type_id);
+      $all_bundles = $this->entityManager->getBundleInfo($entity_type_id);
 
       $relationship = $this->view->getHandler($this->view->current_display, 'filter', $this->options['id']);
       if (isset($relationship['relationship']) && $relationship['relationship'] != 'none') {
@@ -189,19 +233,18 @@ class EREFNodeTitles extends ManyToOne {
         //we need this as a default
         $relationship_field_name = $relationship_fields[0];
       }
-//dpm($relationship_field_name);
+
       //run through the bundles. id like to find a way to look up bundles associated with a field. anyone know?
       foreach (array_keys($all_bundles) as $bundle) {
-        foreach (\Drupal::entityManager()->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
+        foreach ($this->entityManager->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
           if ($field_definition->getType() == 'entity_reference' && $field_definition->getName() == $relationship_field_name) {
             if ($field_definition->getName() == 'uid') {
-              //TODO this will be a whole different query for users. separate filter
+              //TODO this will be a whole different query for users. separate filter?
               continue;
             }
             $field_obj = \Drupal\field\Entity\FieldConfig::loadByName($entity_type_id, $bundle, $field_definition->getName());
-//dpm($field_obj);
             $target_entity_type_id = explode(':',$field_obj->getSetting('handler'));
-//dpm($target_entity_type_id);
+
             if (in_array('views', $target_entity_type_id)) {
               //TODO This wont support views entity references yet
               continue;
@@ -214,7 +257,7 @@ class EREFNodeTitles extends ManyToOne {
             //get all the targets (content types etc) that this might hit
             $target_bundles = array_keys($field_obj->getSetting('handler_settings')['target_bundles']);
             $bundles_needed[] = $bundle;
-//dpm($bundles_needed);
+
             //get the options together
             $gen_options = array();
             $gen_options = array(
@@ -225,12 +268,13 @@ class EREFNodeTitles extends ManyToOne {
               'target_bundles' => $target_bundles
             );
           }
-//dpm($gen_options);
+
         }
       }
+
       //run the query
-      $get_entity = \Drupal::entityManager()->getStorage($gen_options['target_entity_type_id']);
-      $relatedContentQuery = \Drupal::entityQuery($gen_options['target_entity_type_id'])
+      $get_entity = $this->entityManager->getStorage($gen_options['target_entity_type_id']);
+      $relatedContentQuery = $this->entityQuery->get($gen_options['target_entity_type_id'])
         ->condition('type', $gen_options['target_bundles'], 'IN');
       //leave this for any debugging ->sort('title', 'ASC');
       if ($this->options['get_unpublished'] != 2) {
@@ -238,22 +282,25 @@ class EREFNodeTitles extends ManyToOne {
       }
       $relatedContentQuery->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
       $relatedContentIds = $relatedContentQuery->execute(); //returns an array of node ID's
-//dpm($relatedContentIds);
+
+      //remove empty options if desired
       if ($this->options['get_filter_no_results'] == 0) {
-        $db = \Drupal\Core\Database\Database::getConnection();
+        $db = $this->Connection;
         $query = $db->select('node__'.$relationship_field_name, 'x')
           ->fields('x', array($relationship_field_name.'_target_id'))
           ->condition('x.'.$relationship_field_name.'_target_id', $relatedContentIds, 'IN');
-        $relatedContentIds = array_unique($query->execute()->fetchAll(\PDO::FETCH_COLUMN));
+        $ids_w_content = array_unique($query->execute()->fetchAll(\PDO::FETCH_COLUMN));
+        //keep the sort order of the original query
+        $relatedContentIds = array_intersect($relatedContentIds, $ids_w_content);
       }
-//dpm($relatedContentIds);
+
       //get the titles
       foreach($relatedContentIds as $contentId){
           // building an array with nid as key and title as value
           $res[$contentId] = $get_entity->load($contentId)->getTitle();
       }
     }
-//dpm($res);
+
     return $res;
   }
 }
