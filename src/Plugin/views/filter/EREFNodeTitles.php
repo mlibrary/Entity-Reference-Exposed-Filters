@@ -41,7 +41,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
   protected $entityManager;
 
   /**
-   * @var QueryFactory $entity_query
+   * @var QueryFactory $entityQuery
    */
   protected $entityQuery;
 
@@ -98,10 +98,13 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
         unset($this->get_relationships[$key]);
       }
     }
+/*
+//TODO the init gets initialized 2x in preview causing the error message in first pass!
     if (empty($this->get_relationships)) {
       $message = 'You must setup a relationship to an entity_reference field referencing a node to use this filter (i.e. "Content referenced from..")';
       drupal_set_message(t($message), 'error');
     }
+*/
     //set the sort options
     $this->sort_by_options = array('nid','title');
     $this->sort_order_options = array('DESC','ASC');
@@ -174,7 +177,6 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
     $options['exposed'] = array('default' => 1);
 
     //get the relationships. set the first as the default
-    $options = array();
     if (isset($this->get_relationships)){
       $relationship_field_names = array_keys($this->get_relationships);
       $options['relationship'] = array('default' => $relationship_field_names[0], $this->get_relationships);
@@ -286,7 +288,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       //remove empty options if desired
       if ($this->options['get_filter_no_results'] == 0) {
         $db = $this->Connection;
-        $query = $db->select('node__'.$relationship_field_name, 'x')
+        $query = $db->select($entity_type_id.'__'.$relationship_field_name, 'x')
           ->fields('x', array($relationship_field_name.'_target_id'))
           ->condition('x.'.$relationship_field_name.'_target_id', $relatedContentIds, 'IN');
         $ids_w_content = array_unique($query->execute()->fetchAll(\PDO::FETCH_COLUMN));
