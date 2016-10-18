@@ -246,10 +246,9 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
             }
             $field_obj = \Drupal\field\Entity\FieldConfig::loadByName($entity_type_id, $bundle, $field_definition->getName());
             $target_entity_type_id = explode(':',$field_obj->getSetting('handler'));
-
+            //convert an entity reference view to node or user
             if (in_array('views', $target_entity_type_id)) {
-              //TODO This wont support views entity references yet
-              continue;
+              $target_entity_type_id = array('default',$entity_type_id);
             }
             
             //will tell us node, user etc.
