@@ -113,7 +113,9 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
   }
 
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
-    $this->options['expose']['identifier'] = $form_state->get('id');
+    if (!isset($this->options['expose']['identifier'])) {
+      $this->options['expose']['identifier'] = $form_state->get('id');
+    }
     parent::buildOptionsForm($form, $form_state);
     //TODO this probably should be done in an options function but didn't seem to work...this does
     $form['relationship']['#options'] = array_intersect_key($form['relationship']['#options'], $this->get_relationships);
@@ -218,6 +220,9 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
           break;
         case 'node_field_data':
           $entity_type_id = 'node';
+          break;
+        case 'taxonomy_term_field_data':
+          $entity_type_id = 'taxonomy_term';
           break;
         default:
           return;
