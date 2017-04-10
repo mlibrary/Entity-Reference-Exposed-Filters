@@ -294,7 +294,9 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       }
       $relatedContentQuery->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
       $relatedContentIds = $relatedContentQuery->execute(); //returns an array of node ID's
-
+      if (empty($relatedContentIds)) {
+        return [];
+      }
       //remove empty options if desired
       if ($this->options['get_filter_no_results'] == 0) {
         $db = $this->Connection;
@@ -309,7 +311,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       //get the titles
       foreach($relatedContentIds as $contentId){
           // building an array with nid as key and title as value
-          $res[$contentId] = $get_entity->load($contentId)->getTitle();
+          $res[$contentId] = \Drupal::service('entity.repository')->getTranslationFromContext($get_entity->load($contentId))->getTitle();
       }
     }
 
