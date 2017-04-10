@@ -83,7 +83,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
     parent::init($view, $display, $options);
     $this->get_relationships = $this->view->getHandlers('relationship');
     if ($this->get_relationships === NULL) {
-      $this->get_relationship = array();
+      $this->get_relationships = array();
     }
     //check for existence of relationship and remove non-standard and non-node relationships
     //TODO this seems horrible. How can I get the relationship type from the handler?
