@@ -12,7 +12,9 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Database\Connection;
@@ -36,9 +38,11 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
   private $get_relationships;
 
   /**
-   * @var EntityManagerInterface $entityManager
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  protected $entityManager;
+  protected $entityTypeManager;
 
   /**
    * @var QueryFactory $entityQuery
@@ -51,13 +55,29 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
   protected $Connection;
 
   /**
+   * The entity field manager.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  protected $entityFieldManager;
+
+  /**
+   * The entity type bundle info.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
+   */
+  protected $entityTypeBundleInfo;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, QueryFactory $entity_query, EntityManagerInterface $entity_manager, Connection $connection) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, QueryFactory $entity_query, EntityTypeManagerInterface $entity_type_manager, Connection $connection, EntityFieldManagerInterface $entity_field_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->entityQuery = $entity_query;
-    $this->entityManager = $entity_manager;
+    $this->entityTypeManager = $entity_type_manager;
     $this->Connection = $connection;
+    $this->entityFieldManager = $entity_field_manager;
+    $this->entityTypeBundleInfo = $entity_type_bundle_info;
   }
 
   /**
@@ -69,8 +89,10 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       $plugin_id,
       $plugin_definition,
       $container->get('entity.query'),
-      $container->get('entity.manager'),
-      $container->get('database')
+      $container->get('entity_type.manager'),
+      $container->get('database'),
+      $container->get('entity_field.manager'),
+      $container->get('entity_type.bundle.info')
     );
   }
   public function validate() {
@@ -230,7 +252,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       }
 
       //get bundles from a field name.
-      $all_bundles = $this->entityManager->getBundleInfo($entity_type_id);
+      $all_bundles = $this->entityTypeBundleInfo->getBundleInfo($entity_type_id);
 
       $relationship = $this->view->getHandler($this->view->current_display, 'filter', $this->options['id']);
       if (isset($relationship['relationship']) && $relationship['relationship'] != 'none') {
@@ -243,7 +265,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
 
       //run through the bundles. id like to find a way to look up bundles associated with a field. anyone know?
       foreach (array_keys($all_bundles) as $bundle) {
-        foreach ($this->entityManager->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
+        foreach ($this->entityFieldManager->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
           if ($field_definition->getType() == 'entity_reference' && $field_definition->getName() == $relationship_field_name) {
             if ($field_definition->getName() == 'uid') {
               //TODO this will be a whole different query for users. separate filter?
@@ -285,7 +307,7 @@ class EREFNodeTitles extends ManyToOne implements  PluginInspectionInterface, Co
       }
 
       //run the query
-      $get_entity = $this->entityManager->getStorage($gen_options['target_entity_type_id']);
+      $get_entity = $this->entityTypeManager->getStorage($gen_options['target_entity_type_id']);
       $relatedContentQuery = $this->entityQuery->get($gen_options['target_entity_type_id'])
         ->condition('type', $gen_options['target_bundles'], 'IN');
       //leave this for any debugging ->sort('title', 'ASC');
