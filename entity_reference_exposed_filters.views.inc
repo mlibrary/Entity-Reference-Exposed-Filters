@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * Contains \Drupal\entity_reference_exposed_filters\entity_reference_exposed_filters.views.inc.
  */
 
 /**

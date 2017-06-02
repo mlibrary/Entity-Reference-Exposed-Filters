@@ -17,24 +17,53 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Database\Connection;
 
 /**
+ * EREFNodeTitles.
+ */
+
+/**
  * Filters by given list of related content title options.
  *
  * @ingroup views_filter_handlers
  *
  * @ViewsFilter("eref_node_titles")
  */
-/**
- * TODO this doesnt work for tax terms or users. separate filter.
- */
 class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, ContainerFactoryPluginInterface {
+
+  // TODO this doesnt work for tax terms or users. separate filter.
   /**
-   * {@inheritdoc}
+   * Options to sort by.
+   *
+   * @var sortByOptions
    */
-  private $sort_by_options;
-  private $sort_order_options;
-  private $get_unpublished_options;
-  private $get_filter_no_results_options;
-  private $get_relationships;
+  private $sortByOptions;
+
+  /**
+   * Order options.
+   *
+   * @var sortOrderOptions
+   */
+  private $sortOrderOptions;
+
+  /**
+   * Unpublished options.
+   *
+   * @var getUnpublishedOptions
+   */
+  private $getUnpublishedOptions;
+
+  /**
+   * Option to filter out no results.
+   *
+   * @var getFilterNoResultsOptions
+   */
+  private $getFilterNoResultsOptions;
+
+  /**
+   * Get relationships to use.
+   *
+   * @var getRelationships
+   */
+  private $getRelationships;
 
   /**
    * The entity type manager.
@@ -44,11 +73,15 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   protected $entityTypeManager;
 
   /**
+   * The queryfactory.
+   *
    * @var \Drupal\Core\Entity\Query\QueryFactory
    */
   protected $entityQuery;
 
   /**
+   * The dbconnection.
+   *
    * @var \Drupal\Core\Database\Connection
    */
   protected $Connection;
@@ -96,60 +129,61 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function validate() {
-    if (empty($this->get_relationships)) {
+    if (empty($this->getRelationships)) {
       $this->broken();
     }
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function init(ViewExecutable $view, DisplayPluginBase $display, array &$options = NULL) {
     parent::init($view, $display, $options);
-    $this->get_relationships = $this->view->getHandlers('relationship');
-    if ($this->get_relationships === NULL) {
-      $this->get_relationships = [];
+    $this->getRelationships = $this->view->getHandlers('relationship');
+    if ($this->getRelationships === NULL) {
+      $this->getRelationships = [];
     }
-    // Check for existence of relationship and remove non-standard and non-node relationships
-    // TODO this seems horrible. How can I get the relationship type from the handler?
-    $invalid_relationships = ['cid', 'comment_cid', 'last_comment_uid', 'uid', 'vid', 'nid'];
-    foreach ($this->get_relationships as $key => $relationship) {
+    // Check for existence of relationship and
+    // Remove non-standard and non-node relationships
+    // TODO Can I get the relationship type from the handler?
+    $invalid_relationships = [
+      'cid',
+      'comment_cid',
+      'last_comment_uid',
+      'uid',
+      'vid',
+      'nid',
+    ];
+    foreach ($this->getRelationships as $key => $relationship) {
       // $is_node = strpos($relationship['table'], 'ode__');.
       $is_target = strpos($relationship['id'], 'target_id');
       if ($relationship['plugin_id'] != 'standard' ||
           in_array($key, $invalid_relationships) ||
           // $is_node === false ||.
           $is_target !== FALSE) {
-        unset($this->get_relationships[$key]);
+        unset($this->getRelationships[$key]);
       }
     }
-    /*
-    //TODO the init gets initialized 2x in preview causing the error message in first pass!
-    if (empty($this->get_relationships)) {
-    $message = 'You must setup a relationship to an entity_reference field referencing a node to use this filter (i.e. "Content referenced from..")';
-    drupal_set_message(t($message), 'error');
-    }
-     */
-    // set the sort options.
-    $this->sort_by_options = ['nid', 'title'];
-    $this->sort_order_options = ['DESC', 'ASC'];
-    $this->get_unpublished_options = ['Unpublished', 'Published', 'All'];
-    $this->get_filter_no_results_options = ['Yes', "No"];
+
+    // Set the sort options.
+    $this->sortByOptions = ['nid', 'title'];
+    $this->sortOrderOptions = ['DESC', 'ASC'];
+    $this->getUnpublishedOptions = ['Unpublished', 'Published', 'All'];
+    $this->getFilterNoResultsOptions = ['Yes', "No"];
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
     if (!isset($this->options['expose']['identifier'])) {
       $this->options['expose']['identifier'] = $form_state->get('id');
     }
     parent::buildOptionsForm($form, $form_state);
-    // TODO this probably should be done in an options function but didn't seem to work...this does.
-    $form['relationship']['#options'] = array_intersect_key($form['relationship']['#options'], $this->get_relationships);
+    $form['relationship']['#options'] = array_intersect_key($form['relationship']['#options'], $this->getRelationships);
   }
 
   /**
@@ -160,22 +194,22 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function buildExtraOptionsForm(&$form, FormStateInterface $form_state) {
     $form['sort_by'] = [
       '#type' => 'radios',
       '#title' => t('Sort by'),
       '#default_value' => $this->options['sort_by'],
-      '#options' => $this->sort_by_options,
-      '#description' => t('On what attribute do you want to sort the node titles? '),
+      '#options' => $this->sortByOptions,
+      '#description' => t('On what attribute do you want to sort the node titles?'),
       '#required' => TRUE,
     ];
     $form['sort_order'] = [
       '#type' => 'radios',
       '#title' => t('Sort by'),
       '#default_value' => $this->options['sort_order'],
-      '#options' => $this->sort_order_options,
+      '#options' => $this->sortOrderOptions,
       '#description' => t('In what order do you want to sort the node titles?'),
       '#required' => TRUE,
     ];
@@ -183,7 +217,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       '#type' => 'radios',
       '#title' => t('Published Status'),
       '#default_value' => $this->options['get_unpublished'],
-      '#options' => $this->get_unpublished_options,
+      '#options' => $this->getUnpublishedOptions,
       '#description' => t('Do you want Published, Unpublished or All?'),
       '#required' => TRUE,
     ];
@@ -191,14 +225,14 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       '#type' => 'radios',
       '#title' => t('Filter Out Options With No Results'),
       '#default_value' => $this->options['get_filter_no_results'],
-      '#options' => $this->get_filter_no_results_options,
+      '#options' => $this->getFilterNoResultsOptions,
       '#description' => t('Do you want to filter out options that will give no results?'),
       '#required' => TRUE,
     ];
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function submitExtraOptionsForm($form, FormStateInterface $form_state) {
     // Define and regenerate the options if we change the sort.
@@ -207,7 +241,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public function valueForm(&$form, FormStateInterface $form_state) {
     parent::valueForm($form, $form_state);
@@ -218,7 +252,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   protected function defineOptions() {
     $options = parent::defineOptions();
@@ -226,11 +260,12 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
     $options['exposed'] = ['default' => 1];
 
     // Get the relationships. set the first as the default.
-    if (isset($this->get_relationships)) {
-      $relationship_field_names = array_keys($this->get_relationships);
-      $options['relationship'] = ['default' => $relationship_field_names[0], $this->get_relationships];
+    if (isset($this->getRelationships)) {
+      $relationship_field_names = array_keys($this->getRelationships);
+      $options['relationship'] = ['default' => $relationship_field_names[0], $this->getRelationships];
 
-      // Set the sort defaults. always numeric. compare with sort options private arrays to get value for sort.
+      // Set the sort defaults. always numeric.
+      // Compare with sort options private arrays to get value for sort.
       $options['sort_order'] = ['default' => 0];
       $options['sort_by'] = ['default' => 1];
       $options['get_unpublished'] = ['default' => 1];
@@ -251,14 +286,12 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
 
   /**
    * Helper function that generates the options.
-   *
-   * @return array
    */
   public function generateOptions() {
     $res = [];
-    $relationship_fields = array_keys($this->get_relationships);
+    $relationship_fields = array_keys($this->getRelationships);
 
-    if (!empty($this->get_relationships) && isset($relationship_fields[0])) {
+    if (!empty($this->getRelationships) && isset($relationship_fields[0])) {
       // Get the base view. we need it for bundle info and field defs.
       $base_table = array_keys($this->view->getBaseTables());
       $entity_type_db = reset($base_table);
@@ -275,9 +308,6 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
           $entity_type_id = 'taxonomy_term';
           break;
 
-        default:
-          return;
-        break;
       }
 
       // Get bundles from a field name.
@@ -292,12 +322,11 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
         $relationship_field_name = $relationship_fields[0];
       }
 
-      // Run through the bundles. id like to find a way to look up bundles associated with a field. anyone know?
+      // Run through the bundles.
       foreach (array_keys($all_bundles) as $bundle) {
         foreach ($this->entityFieldManager->getFieldDefinitions($entity_type_id, $bundle) as $field_definition) {
           if ($field_definition->getType() == 'entity_reference' && $field_definition->getName() == $relationship_field_name) {
             if ($field_definition->getName() == 'uid') {
-              // TODO this will be a whole different query for users. separate filter?
               continue;
             }
             $field_obj = FieldConfig::loadByName($entity_type_id, $bundle, $field_definition->getName());
@@ -311,7 +340,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
             if ($target_entity_type_id[0] == 'default') {
               $target_entity_type_id = $target_entity_type_id[1];
             }
-            // Filter out entity reference views. we wont know their bundles easily.
+            // Filter out entity reference views.
             if (($handler_settings = $field_obj->getSetting('handler_settings')) && !empty($handler_settings['view'])) {
               drupal_set_message('This is targeting a field filtered by a view. Cannot get bundle.', 'error');
               drupal_set_message('Please use a field filtered by content type only.', 'error');
@@ -343,7 +372,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       if ($this->options['get_unpublished'] != 2) {
         $relatedContentQuery->condition('status', $this->options['get_unpublished']);
       }
-      $relatedContentQuery->sort($this->sort_by_options[$this->options['sort_by']], $this->sort_order_options[$this->options['sort_order']]);
+      $relatedContentQuery->sort($this->sortByOptions[$this->options['sort_by']], $this->sortOrderOptions[$this->options['sort_order']]);
       // Returns an array of node ID's.
       $relatedContentIds = $relatedContentQuery->execute();
       if (empty($relatedContentIds)) {

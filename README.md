@@ -2,7 +2,8 @@
 
 INTRODUCTION
 ------------
-A module for those who need their Entity Reference Exposed Filters to have titles in Select Lists.
+A module for those who need their Entity Reference Exposed Filters
+to have titles in Select Lists.
 
 REQUIREMENTS
 ------------
@@ -17,7 +18,8 @@ INSTALLATION
 
 CONFIGURATION
 -------------
-Set up a Entity Reference Node Relationship (A "Content referenced from .." relationship) in a view.
+Set up a Entity Reference Node Relationship
+(A "Content referenced from .." relationship) in a view.
 Add the "Entity Reference Exposed Filters Node Titles" filter.
 Set the sort options.
 You will now have an exposed filter with referenced node titles.
