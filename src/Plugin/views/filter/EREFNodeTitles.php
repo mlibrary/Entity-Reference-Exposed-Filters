@@ -245,6 +245,9 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
    */
   public function valueForm(&$form, FormStateInterface $form_state) {
     parent::valueForm($form, $form_state);
+    // Reduce duplicates does not work. Do we need it?
+    $form['reduce_duplicates']['#default_value'] = 0;
+    $form['reduce_duplicates'] = ['#disabled' => TRUE];
     // Disable the none option. we have to have a relationship.
     unset($form['relationship']['#options']['none']);
     // Disable the expose button. this should be an exposed filter.
