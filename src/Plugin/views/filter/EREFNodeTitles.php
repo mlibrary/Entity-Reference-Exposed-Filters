@@ -345,8 +345,8 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
             }
             // Filter out entity reference views.
             if (($handler_settings = $field_obj->getSetting('handler_settings')) && !empty($handler_settings['view'])) {
-              drupal_set_message('This is targeting a field filtered by a view. Cannot get bundle.', 'error');
-              drupal_set_message('Please use a field filtered by content type only.', 'error');
+              drupal_set_message(t('This is targeting a field filtered by a view. Cannot get bundle.'), 'error');
+              drupal_set_message(t('Please use a field filtered by content type only.'), 'error');
               return [];
             }
             // Get all the targets (content types etc) that this might hit.
