@@ -29,7 +29,7 @@ use Drupal\Core\Database\Connection;
  */
 class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, ContainerFactoryPluginInterface {
 
-  // TODO this doesnt work for tax terms or users. separate filter.
+  // TODO this doesn't work for tax terms or users. separate filter.
   /**
    * Options to sort by.
    *
@@ -282,7 +282,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
    */
   public function getValueOptions() {
     // Generate the values from the helper function.
-    // TODO? - regenerate the list everytime the relationship field is changed.
+    // TODO? - regenerate the list every time the relationship field is changed.
     $this->valueOptions = $this->generateOptions();
     return $this->valueOptions;
   }
