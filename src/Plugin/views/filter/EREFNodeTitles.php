@@ -292,30 +292,11 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
    */
   public function generateOptions() {
     $res = [];
-    $relationship_fields = array_keys($this->getRelationships);
+    $relationships = $this->getRelationships;
+    $relationship_fields = array_keys($relationships);
 
-    if (!empty($this->getRelationships) && isset($relationship_fields[0])) {
-      // Get the base view. we need it for bundle info and field defs.
-      $base_table = array_keys($this->view->getBaseTables());
-      $entity_type_db = reset($base_table);
-      switch ($entity_type_db) {
-        case 'users_field_data':
-          $entity_type_id = 'user';
-          break;
-
-        case 'node_field_data':
-          $entity_type_id = 'node';
-          break;
-
-        case 'taxonomy_term_field_data':
-          $entity_type_id = 'taxonomy_term';
-          break;
-
-      }
-
-      // Get bundles from a field name.
-      $all_bundles = $this->entityTypeBundleInfo->getBundleInfo($entity_type_id);
-
+    if (!empty($relationships) && isset($relationship_fields[0])) {
+      // Get the relationship of this Views handler
       $relationship = $this->view->getHandler($this->view->current_display, 'filter', $this->options['id']);
       if (isset($relationship['relationship']) && $relationship['relationship'] != 'none') {
         $relationship_field_name = $relationship['relationship'];
@@ -323,6 +304,18 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       else {
         // We need this as a default.
         $relationship_field_name = $relationship_fields[0];
+      }
+
+      // Get the base view. we need it for bundle info and field defs.
+      $entity_type_id = explode('__', $relationships[$relationship_field_name]['table'])[0];
+
+      // Get bundles from a field name.
+      $all_bundles = $this->entityTypeBundleInfo->getBundleInfo($entity_type_id);
+
+      // If that didn't work, attempt again as an entity revision reference table
+      if (empty($all_bundles)) {
+        $entity_type_id = rtrim($entity_type_id, '_revision');
+        $all_bundles = $this->entityTypeBundleInfo->getBundleInfo($entity_type_id);
       }
 
       // Run through the bundles.
