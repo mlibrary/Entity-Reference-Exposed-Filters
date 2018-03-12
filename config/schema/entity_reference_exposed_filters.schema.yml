@@ -1,0 +1,9 @@
+# Schema for configuration files of the Entity Reference Exposed Filters module.
+
+views.filter.eref_node_titles:
+  type: views_filter
+  label: 'Node ID'
+
+views.filter_value.eref_node_titles:
+  type: views.filter_value.numeric
+  label: 'Node ID'
