@@ -12,7 +12,6 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Database\Connection;
 
@@ -73,13 +72,6 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   protected $entityTypeManager;
 
   /**
-   * The queryfactory.
-   *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
-   */
-  protected $entityQuery;
-
-  /**
    * The dbconnection.
    *
    * @var \Drupal\Core\Database\Connection
@@ -103,9 +95,8 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, QueryFactory $entity_query, EntityTypeManagerInterface $entity_type_manager, Connection $connection, EntityFieldManagerInterface $entity_field_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, Connection $connection, EntityFieldManagerInterface $entity_field_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->entityQuery = $entity_query;
     $this->entityTypeManager = $entity_type_manager;
     $this->Connection = $connection;
     $this->entityFieldManager = $entity_field_manager;
@@ -120,7 +111,6 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('entity.query'),
       $container->get('entity_type.manager'),
       $container->get('database'),
       $container->get('entity_field.manager'),
@@ -362,7 +352,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
 
       // Run the query.
       $get_entity = $this->entityTypeManager->getStorage($gen_options['target_entity_type_id']);
-      $relatedContentQuery = $this->entityQuery->get($gen_options['target_entity_type_id'])
+      $relatedContentQuery = $this->entityTypeManager->getStorage($gen_options['target_entity_type_id'])->getQuery()
         ->condition('type', $gen_options['target_bundles'], 'IN');
       // Leave this for any debugging ->sort('title', 'ASC');.
       if ($this->options['get_unpublished'] != 2) {
