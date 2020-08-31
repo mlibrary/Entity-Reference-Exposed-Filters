@@ -45,6 +45,13 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
   private $sortOrderOptions;
 
   /**
+   * Order bundle options.
+   *
+   * @var sortBundleOrder
+   */
+  private $sortBundleOrder;
+
+  /**
    * Unpublished options.
    *
    * @var getUnpublishedOptions
@@ -162,6 +169,7 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
     // Set the sort options.
     $this->sortByOptions = ['nid', 'title'];
     $this->sortOrderOptions = ['DESC', 'ASC'];
+    $this->sortBundleOrder = ['DESC', 'ASC'];
     $this->getUnpublishedOptions = ['Unpublished', 'Published', 'All'];
     $this->getFilterNoResultsOptions = ['Yes', "No"];
   }
@@ -202,6 +210,14 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       '#default_value' => $this->options['sort_order'],
       '#options' => $this->sortOrderOptions,
       '#description' => $this->t('In what order do you want to sort the node titles?'),
+      '#required' => TRUE,
+    ];
+    $form['sort_bundle_order'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('Sort bundles'),
+      '#default_value' => $this->options['sort_bundle_order'],
+      '#options' => $this->sortOrderOptions,
+      '#description' => $this->t('In what order do you want to sort the node bundles? (only relevant if there are multiple)'),
       '#required' => TRUE,
     ];
     $form['get_unpublished'] = [
@@ -334,7 +350,9 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
               return [];
             }
             // Get all the targets (content types etc) that this might hit.
-            $target_bundles = array_keys($field_obj->getSetting('handler_settings')['target_bundles']);
+            foreach (array_keys($field_obj->getSetting('handler_settings')['target_bundles']) as $bundle) {
+              $target_bundles[] = $bundle;
+            }
             $bundles_needed[] = $bundle;
 
             // Get the options together.
@@ -354,7 +372,8 @@ class EREFNodeTitles extends ManyToOne implements PluginInspectionInterface, Con
       // Run the query.
       $get_entity = $this->entityTypeManager->getStorage($gen_options['target_entity_type_id']);
       $relatedContentQuery = $this->entityTypeManager->getStorage($gen_options['target_entity_type_id'])->getQuery()
-        ->condition('type', $gen_options['target_bundles'], 'IN');
+        ->condition('type', $gen_options['target_bundles'], 'IN')
+        ->sort('type', $this->sortBundleOrder[$this->options['sort_bundle_order']]);
       // Leave this for any debugging ->sort('title', 'ASC');.
       if ($this->options['get_unpublished'] != 2) {
         $relatedContentQuery->condition('status', $this->options['get_unpublished']);
